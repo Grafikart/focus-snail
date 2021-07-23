@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <script src="focus-snail.js" defer></script>
+</head>
+<body>
+
+<p style="display: flex;">
+  <button  id="focus-transition-play-button">Play</button>
+  <label style="position: relative; top: 100px;"><input type="radio" name="focus_radio"  value="focusSnail"
+                                                        id="focus-snail_toggler" class="" style="">Focus Snail</label>
+  <label><input type="radio" name="focus_radio" value="focusZoom"
+                id="focus-zoom_toggler">Focus Zoom</label>
+  <label><input type="radio" name="focus_radio" value="focusHug"
+                id="focus-hug_toggler">Focus Hug</label>
+</p>
+
+<table id="keyboard-focus-demo">
+  <tbody>
+  <tr>
+    <td>
+      <input class="dummy" value="dummy text field" style="width: 200px;">
+    </td>
+    <td rowspan="2">
+      <select class="dummy" multiple="" style="height:4.2em">
+        <option>UI</option>
+        <option>UX</option>
+        <option>accessibility</option>
+      </select>
+    </td>
+    <td style="text-align:center"><input class="dummy" type="range"></td>
+  </tr>
+  <tr>
+    <td>
+      <label><input class="dummy" type="radio" name="#article_focus-transition-2_dummy">CSS</label>
+      <label><input class="dummy" type="radio" name="#article_focus-transition-2_dummy">JS</label>
+      <label><input class="dummy" type="radio" name="#article_focus-transition-2_dummy">SVG</label>
+    </td>
+    <td style="text-align:center"><input class="dummy" type="url" value="http://n12v.com/" size="20"></td>
+  </tr>
+  </tbody>
+</table>
+
+<div style="background-color:lightcoral; height: 150vw"></div>
+
+<input type="text">
+
+<focus-snail></focus-snail>
+</body>
+</html>

@@ -208,7 +208,7 @@ function htmlFragment() {
 	return div;
 }
 
-
+// Done
 function initialize() {
 	var html = htmlFragment();
 	svg = getId(html, 'svg');

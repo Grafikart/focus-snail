@@ -1,0 +1,11 @@
+{
+  "name": "focus-snail",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Grafikart/focus-snail.git",
+  "author": "Jonathan <contact@grafikart.fr>",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.3.5"
+  }
+}
