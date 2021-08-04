@@ -1,5 +1,4 @@
 "use strict";
-const OFFSET_PX = 0;
 const MIN_WIDTH = 12;
 const MIN_HEIGHT = 8;
 const START_FRACTION = 0.4;
@@ -7,11 +6,13 @@ const MIDDLE_FRACTION = 0.8;
 const KEYDOWN_DELAY = 42; // Delay between key press and blur (in ms)
 const CATCH_KEYS = ['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 let ANIMATION_ID = 0;
+const SPEED = 50;
 class FocusSnail extends HTMLElement {
     constructor() {
         super(...arguments);
         this.keydownTime = 0;
         this.prevFocused = null;
+        this.prevColor = '';
         this._svg = null;
         this.onBlur = (e) => {
             this.onEnd();
@@ -23,10 +24,13 @@ class FocusSnail extends HTMLElement {
             }
         };
         this.onFocus = (e) => {
+            const color = focusColor(e.target);
             if (!this.isJustPressed() || !this.prevFocused) {
+                this.prevColor = color;
                 return;
             }
             this.animateFocus(this.prevFocused, e.target);
+            this.prevColor = color;
         };
         this.onKeyDown = (e) => {
             if (CATCH_KEYS.includes(e.key)) {
@@ -58,13 +62,8 @@ class FocusSnail extends HTMLElement {
         return Date.now() - this.keydownTime < KEYDOWN_DELAY;
     }
     animateFocus(prevElement, currentElement) {
-        console.log('animate', prevElement, currentElement);
         const prevRect = getAbsoluteBoundingClientRect(prevElement);
         const currentRect = getAbsoluteBoundingClientRect(currentElement);
-        let left = 0;
-        let prevLeft = 0;
-        let top = 0;
-        let prevTop = 0;
         const distance = distanceBetween(prevRect, currentRect);
         const duration = durationFromDistance(distance);
         // Setup the svg
@@ -75,16 +74,28 @@ class FocusSnail extends HTMLElement {
         this.style.setProperty('height', px(window.innerHeight));
         svg.setAttribute('width', window.innerWidth.toString());
         svg.setAttribute('height', window.innerHeight.toString());
-        left = currentRect.left - window.pageXOffset;
-        prevLeft = prevRect.left - window.pageXOffset;
-        top = currentRect.top - window.pageYOffset;
-        prevTop = prevRect.top - window.pageYOffset;
         // Set the gradient angle
         setGradientAngle(this.svg.gradient, prevRect, currentRect);
         drawPolygon(this.svg.polygon, prevRect, currentRect);
-        // Log the distance and the duration
+        // Animate the gradient color
+        this.animate([{
+                'color': this.prevColor
+            }, {
+                'color': focusColor(currentElement)
+            }], {
+            duration: duration,
+            fill: 'both',
+            easing: 'cubic-bezier(0.455, 0.03, 0.515, 0.955)'
+        });
+        // Animate the gradient
         animate(fraction => {
-            // TODO : animate
+            const startOffset = fraction > START_FRACTION ? easeOutQuad((fraction - START_FRACTION) / (1 - START_FRACTION)) : 0;
+            const middleOffset = fraction < MIDDLE_FRACTION ? easeOutQuad(fraction / MIDDLE_FRACTION) : 1;
+            this.svg.start.setAttribute('offset', startOffset * 100 + '%');
+            this.svg.middle.setAttribute('offset', middleOffset * 100 + '%');
+            if (fraction >= 1) {
+                this.onEnd();
+            }
         }, duration);
     }
     get svg() {
@@ -100,6 +111,7 @@ class FocusSnail extends HTMLElement {
     width: 100vw;
     height: 100vh;
     pointer-events: none;
+    --fallbackColor: rgb(91, 157, 217);
   }
   #focus-snail_svg {
     position: absolute;
@@ -122,9 +134,9 @@ class FocusSnail extends HTMLElement {
   </style>
   <svg id="focus-snail_svg" width="1000" height="800">
 		<linearGradient id="focus-snail_gradient">
-			<stop id="focus-snail_start" offset="0%" stop-color="rgb(91, 157, 217)" stop-opacity="0"/>
-			<stop id="focus-snail_middle" offset="80%" stop-color="rgb(91, 157, 217)" stop-opacity="0.8"/>
-			<stop id="focus-snail_end" offset="100%" stop-color="rgb(91, 157, 217)" stop-opacity="0"/>
+			<stop id="focus-snail_start" offset="0%" stop-color="currentColor" stop-opacity="0"/>
+			<stop id="focus-snail_middle" offset="80%" stop-color="currentColor" stop-opacity="0.8"/>
+			<stop id="focus-snail_end" offset="100%" stop-color="currentColor" stop-opacity="0"/>
 		</linearGradient>
 		<polygon id="focus-snail_polygon" fill="url(#focus-snail_gradient)" points=""/>
 	</svg>`;
@@ -148,8 +160,8 @@ function getAbsoluteBoundingClientRect(element) {
     const width = Math.max(MIN_WIDTH, rect.width);
     const height = Math.max(MIN_HEIGHT, rect.height);
     return {
-        top: rect.top + window.pageYOffset,
-        left: rect.left + window.pageXOffset,
+        top: rect.top,
+        left: rect.left,
         bottom: rect.top + height,
         right: rect.left + width,
         width,
@@ -168,7 +180,7 @@ function distanceBetween(start, end) {
  * Find the duration for the animation based on the distance
  */
 function durationFromDistance(distance) {
-    return Math.pow(clamp(distance, 32, 1024), 1 / 3) * 50;
+    return Math.pow(clamp(distance, 32, 1024), 1 / 3) * SPEED;
 }
 /**
  * Clamp a value between a minimum and maximum value
@@ -180,7 +192,7 @@ function clamp(value, min, max) {
 function setGradientAngle(gradient, from, to) {
     const fromCenter = { x: from.left + from.width / 2, y: from.top + from.height / 2 };
     const toCenter = { x: to.left + to.width / 2, y: to.top + to.height / 2 };
-    const angle = Math.atan2(toCenter.y - fromCenter.y, toCenter.x - fromCenter.x);
+    const angle = Math.atan2(fromCenter.y - toCenter.y, fromCenter.x - toCenter.x);
     const line = angleToLine(angle);
     gradient.setAttribute('x1', line[0].x.toString());
     gradient.setAttribute('y1', line[0].y.toString());
@@ -199,7 +211,7 @@ function angleToLine(angle) {
     const y = op * Math.sin(angle);
     return [{
             x: x < 0 ? 1 : 0,
-            y: y < 0 ? 1 : 0,
+            y: y < 0 ? 1 : 0
         }, {
             x: x >= 0 ? x : x + 1,
             y: y >= 0 ? y : y + 1
@@ -210,7 +222,6 @@ function angleToLine(angle) {
  */
 function drawPolygon(polygon, from, to) {
     let x = 0;
-    console.log(from, to);
     if (from.top < to.top) {
         x = 1;
     }
@@ -258,7 +269,6 @@ function drawPolygon(polygon, from, to) {
         pt.y = point.y;
         polygon.points.appendItem(pt);
     }
-    console.log(polygonPoints, points, x);
 }
 function rectToPoints(rect) {
     return [
@@ -297,5 +307,26 @@ function animate(step, duration) {
 }
 function px(n) {
     return n.toString() + 'px';
+}
+function easeOutQuad(t) {
+    return 2 * t - t * t;
+}
+/**
+ * Find the focus color of an element
+ * Properties are used in this order
+ *
+ * - Outline
+ * - Box-shadow
+ */
+function focusColor(element) {
+    const style = getComputedStyle(element);
+    if (style.outlineStyle !== 'none') {
+        return style.outlineColor;
+    }
+    const match = style.boxShadow.match(/rgba?\([^\)]+\)/);
+    if (match) {
+        return match[0];
+    }
+    return 'var(--fallbackColor)';
 }
 customElements.define('focus-snail', FocusSnail);
